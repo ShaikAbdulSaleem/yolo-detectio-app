@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>YOLOv8 Detection</title>
+  <style>
+    body { background-color: #222; color: #fff; text-align: center; font-family: sans-serif; }
+    input, button { margin: 10px; padding: 10px; font-size: 1em; }
+    img { margin-top: 20px; max-width: 90%; border: 2px solid lime; }
+  </style>
+</head>
+<body>
+  <h1>Upload an Image for YOLOv8 Detection</h1>
+  <form action="/detect" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/*" required>
+    <button type="submit">Detect Objects</button>
+  </form>
+  <img src="/static/output.jpg" alt="Output" onerror="this.style.display='none'" />
+</body>
+</html>
