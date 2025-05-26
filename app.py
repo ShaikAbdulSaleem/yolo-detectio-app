@@ -1,4 +1,3 @@
-!pip install ultralytics
 # app.py - Backend with Flask
 from flask import Flask, render_template, request, send_from_directory
 import os
