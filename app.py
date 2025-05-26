@@ -1,17 +1,19 @@
-# app.py - Backend with Flask
-from flask import Flask, render_template, request, send_from_directory
+# app.py
 import os
+from flask import Flask, request, render_template, send_from_directory
 from ultralytics import YOLO
-import cv2
 
 app = Flask(__name__)
+
 UPLOAD_FOLDER = 'static/uploads'
 ANNOTATED_FOLDER = 'static/annotated'
 
+# Create folders if they don't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(ANNOTATED_FOLDER, exist_ok=True)
 
-model = YOLO('yolov8n.pt')  # Make sure this file is in your project or correctly referenced
+# Load YOLO model (make sure yolov8n.pt is in project folder or specify full path)
+model = YOLO('yolov8n.pt')
 
 @app.route('/')
 def home():
@@ -20,29 +22,29 @@ def home():
 @app.route('/upload-image', methods=['POST'])
 def upload_image():
     if 'image' not in request.files:
-        return 'No file uploaded', 400
-    image = request.files['image']
-    path = os.path.join(UPLOAD_FOLDER, image.filename)
-    image.save(path)
+        return "No file part", 400
 
-    # Detection
-    results = model(path)
-    annotated_path = os.path.join(ANNOTATED_FOLDER, 'annotated.jpg')
-    results[0].save(filename=annotated_path)
+    file = request.files['image']
+    if file.filename == '':
+        return "No selected file", 400
 
-    return render_template('result.html', image_path=annotated_path)
+    filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(filepath)
 
-@app.route('/webcam')
-def webcam():
-    return render_template('webcam.html')
+    # Run YOLO detection
+    results = model(filepath)
 
-@app.route('/video')
-def video():
-    return render_template('video.html')
+    # Save annotated image
+    annotated_img_path = os.path.join(ANNOTATED_FOLDER, 'annotated.jpg')
+    results[0].save(filename=annotated_img_path)
+
+    # Pass annotated image path to result page
+    return render_template('result.html', image_path=annotated_img_path)
 
 @app.route('/static/<path:path>')
 def send_static(path):
     return send_from_directory('static', path)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    # For local testing only; on Render use gunicorn to run
     app.run(host='0.0.0.0', port=10000)
