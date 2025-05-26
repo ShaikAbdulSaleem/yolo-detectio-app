@@ -1,86 +1,49 @@
+!pip install ultralytics
+# app.py - Backend with Flask
+from flask import Flask, render_template, request, send_from_directory
 import os
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
-import cv2
 from ultralytics import YOLO
+import cv2
 
 app = Flask(__name__)
-
-# Folder to save uploads and results
 UPLOAD_FOLDER = 'static/uploads'
-RESULT_FOLDER = 'static/results'
+ANNOTATED_FOLDER = 'static/annotated'
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(RESULT_FOLDER, exist_ok=True)
+os.makedirs(ANNOTATED_FOLDER, exist_ok=True)
 
-# Load your YOLO model once
-model = YOLO("yolov8n.pt")  # or yolov8s.pt, etc.
+model = YOLO('yolov8n.pt')  # Make sure this file is in your project or correctly referenced
 
-# Home page: shows upload options
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# Handle image upload and detection
 @app.route('/upload-image', methods=['POST'])
 def upload_image():
     if 'image' not in request.files:
-        return "No image uploaded", 400
-    file = request.files['image']
-    if file.filename == '':
-        return "No selected file", 400
+        return 'No file uploaded', 400
+    image = request.files['image']
+    path = os.path.join(UPLOAD_FOLDER, image.filename)
+    image.save(path)
 
-    # Save original image
-    img_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(img_path)
+    # Detection
+    results = model(path)
+    annotated_path = os.path.join(ANNOTATED_FOLDER, 'annotated.jpg')
+    results[0].save(filename=annotated_path)
 
-    # Read image with OpenCV
-    img = cv2.imread(img_path)
-    if img is None:
-        return "Failed to read image", 400
+    return render_template('result.html', image_path=annotated_path)
 
-    # Run YOLO detection
-    results = model(img)
-
-    # Annotate image
-    annotated_img = results[0].plot()  # Returns numpy array with boxes
-
-    # Save annotated image
-    result_filename = 'result_' + file.filename
-    result_path = os.path.join(RESULT_FOLDER, result_filename)
-    cv2.imwrite(result_path, annotated_img)
-
-    # Redirect to result page showing this image
-    return redirect(url_for('show_result', filename=result_filename))
-
-# Handle video upload (basic save only)
-@app.route('/upload-video', methods=['POST'])
-def upload_video():
-    if 'video' not in request.files:
-        return "No video uploaded", 400
-    file = request.files['video']
-    if file.filename == '':
-        return "No selected file", 400
-
-    video_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(video_path)
-
-    # TODO: Add video processing and detection here if you want
-
-    return f"Video uploaded successfully: {file.filename}"
-
-# Webcam page placeholder
 @app.route('/webcam')
 def webcam():
-    return "<h2>Webcam streaming not yet implemented. Coming soon! 🎥</h2><a href='/'>Back</a>"
+    return render_template('webcam.html')
 
-# Show result page with annotated image
-@app.route('/result/<filename>')
-def show_result(filename):
-    return render_template('result.html', filename=filename)
+@app.route('/video')
+def video():
+    return render_template('video.html')
 
-# Serve uploaded and result files (optional if you want direct access)
-@app.route('/static/<path:filename>')
-def static_files(filename):
-    return send_from_directory('static', filename)
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000, debug=True)
+    app.run(host='0.0.0.0', port=10000)
